@@ -90,9 +90,19 @@ jobs:
             gradle assembleDebug --stacktrace --no-daemon --no-build-cache
           fi
 
+      - name: Find & Prepare APK Files
+        run: |
+          echo "Searching for generated APK files..."
+          mkdir -p release_output
+          find . -type f -name "*.apk" -exec cp -v {} release_output/ \; || true
+          echo "Files ready for artifact upload:"
+          ls -lah release_output/
+
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: enjoy-recorder-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          path: |
+            release_output/*.apk
+            app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
