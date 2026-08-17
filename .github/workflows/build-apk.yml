@@ -17,18 +17,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Gradle 8.9
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-          cache-disabled: true
-
-      - name: Ensure Gradle Wrapper, Properties & Version Catalog Exist
+      - name: Ensure Android Environment & Gradle Setup
         run: |
           mkdir -p gradle/wrapper
           cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
@@ -41,7 +35,7 @@ jobs:
           zipStorePath=wrapper/dists
           EOF
           if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "Downloading gradle-wrapper.jar..."
+            echo "Downloading official gradle-wrapper.jar..."
             curl -sSL --retry 3 -o gradle/wrapper/gradle-wrapper.jar "https://raw.githubusercontent.com/gradle/gradle/v8.9.0/gradle/wrapper/gradle-wrapper.jar" || true
           fi
           if [ ! -f "gradle/libs.versions.toml" ]; then
@@ -73,36 +67,23 @@ jobs:
           compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
           EOF
           fi
-          # Accept Android SDK Licenses & Fix Line Endings
+          if [ ! -f "gradlew" ]; then
+            echo "Downloading official gradlew script..."
+            curl -sSL --retry 3 -o gradlew "https://raw.githubusercontent.com/gradle/gradle/v8.9.0/gradlew" || true
+          fi
+          sed -i 's/\r$//' gradlew || true
+          chmod +x gradlew
+
           mkdir -p "$ANDROID_HOME/licenses" || true
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license" 2>/dev/null || true
           echo "84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_HOME/licenses/android-sdk-preview-license" 2>/dev/null || true
-          if [ -f "gradlew" ]; then
-            sed -i 's/\r$//' gradlew
-            chmod +x gradlew
-          fi
 
       - name: Build Debug APK with Gradle
-        run: |
-          if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --stacktrace --no-daemon --no-build-cache
-          else
-            gradle assembleDebug --stacktrace --no-daemon --no-build-cache
-          fi
-
-      - name: Find & Prepare APK Files
-        run: |
-          echo "Searching for generated APK files..."
-          mkdir -p release_output
-          find . -type f -name "*.apk" -exec cp -v {} release_output/ \; || true
-          echo "Files ready for artifact upload:"
-          ls -lah release_output/
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: enjoy-recorder-debug-apk
-          path: |
-            release_output/*.apk
-            app/build/outputs/apk/**/*.apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
