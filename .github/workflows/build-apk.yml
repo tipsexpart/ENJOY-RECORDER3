@@ -38,7 +38,7 @@ jobs:
           org.gradle.parallel=false
           EOF
 
-          # 2. Ensure Theme and Resource Files Exist (Fixes Crash and Open Issues)
+          # 2. Ensure Theme and Resource Files Exist
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/res/mipmap-anydpi-v26
