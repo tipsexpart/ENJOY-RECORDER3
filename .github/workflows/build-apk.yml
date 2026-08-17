@@ -16,6 +16,18 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          cache-disabled: true
+
       - name: Ensure Gradle Wrapper, Properties & Version Catalog Exist
         run: |
           mkdir -p gradle/wrapper
@@ -61,27 +73,22 @@ jobs:
           compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
           EOF
           fi
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Set up Gradle 8.9 (Cache-Free & Resilient)
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-          cache-disabled: true
-
-      - name: Grant Execute Permission to Gradlew
-        run: chmod +x gradlew || true
+          # Accept Android SDK Licenses & Fix Line Endings
+          mkdir -p "$ANDROID_HOME/licenses" || true
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license" 2>/dev/null || true
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_HOME/licenses/android-sdk-preview-license" 2>/dev/null || true
+          if [ -f "gradlew" ]; then
+            sed -i 's/\r$//' gradlew
+            chmod +x gradlew
+          fi
 
       - name: Build Debug APK with Gradle
-        run: ./gradlew assembleDebug --stacktrace --no-daemon --no-build-cache
+        run: |
+          if [ -f "./gradlew" ]; then
+            ./gradlew assembleDebug --stacktrace --no-daemon --no-build-cache
+          else
+            gradle assembleDebug --stacktrace --no-daemon --no-build-cache
+          fi
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
