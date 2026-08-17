@@ -28,6 +28,7 @@ jobs:
 
       - name: Prepare Android Resources, Memory & Gradle Wrapper
         run: |
+          # 1. Configure Gradle Properties
           cat << 'EOF' > gradle.properties
           org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8
           android.useAndroidX=true
@@ -37,6 +38,7 @@ jobs:
           org.gradle.parallel=false
           EOF
 
+          # 2. Ensure Theme and Resource Files Exist (Fixes Crash and Open Issues)
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/res/mipmap-anydpi-v26
@@ -44,9 +46,10 @@ jobs:
           cat << 'EOF' > app/src/main/res/values/themes.xml
           <?xml version="1.0" encoding="utf-8"?>
           <resources xmlns:tools="http://schemas.android.com/tools">
-              <style name="Theme.EnjoyRecorder" parent="android:Theme.Material.Light.NoActionBar">
+              <style name="Theme.EnjoyRecorder" parent="android:Theme.DeviceDefault.NoActionBar">
                   <item name="android:statusBarColor">#0F172A</item>
                   <item name="android:navigationBarColor">#0F172A</item>
+                  <item name="android:windowBackground">#0F172A</item>
               </style>
               <style name="Theme.App" parent="Theme.EnjoyRecorder" />
               <style name="Theme.App.NoActionBar" parent="Theme.EnjoyRecorder" />
@@ -102,6 +105,7 @@ jobs:
 
           cp app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
 
+          # 3. Ensure Gradle Wrapper & Catalog
           mkdir -p gradle/wrapper
           cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
           distributionBase=GRADLE_USER_HOME
@@ -113,11 +117,9 @@ jobs:
           zipStorePath=wrapper/dists
           EOF
           if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "Downloading official gradle-wrapper.jar..."
             curl -sSL --retry 3 -o gradle/wrapper/gradle-wrapper.jar "https://raw.githubusercontent.com/gradle/gradle/v8.9.0/gradle/wrapper/gradle-wrapper.jar" || true
           fi
           if [ ! -f "gradle/libs.versions.toml" ]; then
-            echo "Generating gradle/libs.versions.toml catalog..."
             cat << 'EOF' > gradle/libs.versions.toml
           [versions]
           agp = "8.7.3"
@@ -146,7 +148,6 @@ jobs:
           EOF
           fi
           if [ ! -f "gradlew" ]; then
-            echo "Downloading official gradlew script..."
             curl -sSL --retry 3 -o gradlew "https://raw.githubusercontent.com/gradle/gradle/v8.9.0/gradlew" || true
           fi
           sed -i 's/\r$//' gradlew || true
